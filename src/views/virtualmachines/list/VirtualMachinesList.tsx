@@ -42,6 +42,7 @@ import { getCluster } from '@multicluster/helpers/selectors';
 import useIsAllClustersPage from '@multicluster/hooks/useIsAllClustersPage';
 import {
   DocumentTitle,
+  FilterValue,
   K8sVerb,
   ListPageBody,
   useListPageFilter,
@@ -77,14 +78,29 @@ import './VirtualMachinesList.scss';
 type VirtualMachinesListProps = {
   allVMsLoaded?: boolean;
   cluster?: string;
+  columnManagementID?: string;
+  hideFilterBar?: boolean;
+  hideSearchBar?: boolean;
   isSearchResultsPage?: boolean;
   kind: string;
   namespace: string;
+  presetFilters?: { [key: string]: FilterValue };
 } & RefAttributes<ExposedFilterFunctions | null>;
+
+const DEFAULT_PRESET_FILTERS: { [key: string]: FilterValue } = {};
 
 const VirtualMachinesList: FC<VirtualMachinesListProps> = forwardRef((props, ref) => {
   const { t } = useKubevirtTranslation();
-  const { allVMsLoaded, cluster, isSearchResultsPage = false, namespace } = props;
+  const {
+    allVMsLoaded,
+    cluster,
+    columnManagementID = VirtualMachineModelRef,
+    hideFilterBar,
+    hideSearchBar,
+    isSearchResultsPage = false,
+    namespace,
+    presetFilters = DEFAULT_PRESET_FILTERS,
+  } = props;
 
   const isAllClustersPage = useIsAllClustersPage();
 
@@ -149,7 +165,7 @@ const VirtualMachinesList: FC<VirtualMachinesListProps> = forwardRef((props, ref
   const [, filteredVMs, onFilterChange] = useListPageFilter<V1VirtualMachine, V1VirtualMachine>(
     vmsToShow,
     [...filtersWithSelect, ...hiddenFilters],
-    filtersFromURL,
+    { ...filtersFromURL, ...presetFilters }, // presetFilters will override any URL filters to enforce context (e.g., node-specific view)
   );
 
   useEffect(() => {
@@ -198,7 +214,7 @@ const VirtualMachinesList: FC<VirtualMachinesListProps> = forwardRef((props, ref
   const manageableColumns = useMemo(() => columns.filter((col) => col.label), [columns]);
 
   const [activeColumns, , loadedColumns] = useKubevirtUserSettingsTableColumns<V1VirtualMachine>({
-    columnManagementID: VirtualMachineModelRef,
+    columnManagementID,
     columns: manageableColumns.map((col) => ({
       additional: col.additional,
       id: col.key,
@@ -219,8 +235,8 @@ const VirtualMachinesList: FC<VirtualMachinesListProps> = forwardRef((props, ref
   }, [activeColumns, columns, manageableColumns]);
 
   const columnLayout = useMemo(
-    () => buildColumnLayout(manageableColumns, activeColumnKeys, VirtualMachineModelRef),
-    [manageableColumns, activeColumnKeys],
+    () => buildColumnLayout(manageableColumns, activeColumnKeys, columnManagementID),
+    [manageableColumns, activeColumnKeys, columnManagementID],
   );
 
   const loaded = vmsLoaded && vmisLoaded && vmimsLoaded && !loadingFeatureProxy && loadedColumns;
@@ -254,31 +270,35 @@ const VirtualMachinesList: FC<VirtualMachinesListProps> = forwardRef((props, ref
             <VirtualMachineEmptyState namespace={namespace} />
           ) : (
             <>
-              <SearchBar
-                onFilterChange={onFilterChange}
-                vmis={vmis}
-                vmisLoaded={vmisLoaded}
-                vms={vmsToShow}
-                vmsLoaded={vmsLoaded}
-              />
-              <VirtualMachineFilterToolbar
-                onFilterChange={(...args) => {
-                  deselectAllVMs();
-                  onFilterChange(...args);
-                  setPagination((prevPagination) => ({
-                    ...prevPagination,
-                    endIndex: prevPagination?.perPage,
-                    page: 1,
-                    startIndex: 0,
-                  }));
-                }}
-                className="list-managment-group__toolbar"
-                filtersWithSelect={filtersWithSelect}
-                hiddenFilters={hiddenFilters}
-                isSearchResultsPage={isSearchResultsPage}
-                listPageBodySize={listPageBodySize}
-                loaded
-              />
+              {!hideSearchBar && (
+                <SearchBar
+                  onFilterChange={onFilterChange}
+                  vmis={vmis}
+                  vmisLoaded={vmisLoaded}
+                  vms={vmsToShow}
+                  vmsLoaded={vmsLoaded}
+                />
+              )}
+              {!hideFilterBar && (
+                <VirtualMachineFilterToolbar
+                  onFilterChange={(...args) => {
+                    deselectAllVMs();
+                    onFilterChange(...args);
+                    setPagination((prevPagination) => ({
+                      ...prevPagination,
+                      endIndex: prevPagination?.perPage,
+                      page: 1,
+                      startIndex: 0,
+                    }));
+                  }}
+                  className="list-managment-group__toolbar"
+                  filtersWithSelect={filtersWithSelect}
+                  hiddenFilters={hiddenFilters}
+                  isSearchResultsPage={isSearchResultsPage}
+                  listPageBodySize={listPageBodySize}
+                  loaded
+                />
+              )}
               <div className="list-managment-group">
                 <VirtualMachineSelection pagination={pagination} vms={filteredVMs} />
                 <Flex flexWrap={{ default: 'nowrap' }}>

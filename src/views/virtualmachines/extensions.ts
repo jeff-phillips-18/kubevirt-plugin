@@ -10,6 +10,7 @@ export const exposedModules: ConsolePluginBuildMetadata['exposedModules'] = {
   LogsStandAlone:
     './views/virtualmachines/details/tabs/diagnostic/VirtualMachineLogViewer/VirtualMachineLogViewerStandAlone/VirtualMachineLogViewerStandAlone.tsx',
   Navigator: './views/virtualmachines/navigator/VirtualMachineNavigator.tsx',
+  NodeVirtualMachineList: './views/virtualmachines/node/NodeVirtualMachinesList.tsx',
   useServiceActionsProvider: './utils/components/ServicesList/useServiceActionsProvider.ts',
   VirtualMachineSearchResults: './views/virtualmachines/search/VirtualMachineSearchResults.tsx',
 };
@@ -60,4 +61,16 @@ export const extensions: EncodedExtension[] = [
     },
     type: 'console.page/route',
   } as EncodedExtension<RoutePage>,
+  {
+    properties: {
+      component: { $codeRef: 'NodeVirtualMachineList' },
+      page: {
+        name: '%plugin__kubevirt-plugin~Virtual machines%',
+        priority: 90,
+        tabId: 'virtualmachines',
+      },
+      parentTab: 'workloads',
+    },
+    type: 'console.node/sub-nav-tab',
+  } as EncodedExtension,
 ];
